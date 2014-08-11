@@ -1,3 +1,4 @@
+import coopr.environ
 import pandas as pd
 import vicus
 from coopr.opt.base import SolverFactory
