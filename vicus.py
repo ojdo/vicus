@@ -1,14 +1,13 @@
-"""PICUS: Python version of VICUS, the little sister of URBS
+"""VICUS: A linear optimisation model for localised energy systems
 
-PICUS is the Python port of the GAMS/MATLAB model called VICUS, a 
-linear optimization model for a localized energy system. It minimizes
-total cost for providing energy in form of desired commodities (usually
-electricity). The model contains commodities (electricity, fossil fuels, 
-renewable energy sources, greenhouse gases), processes that convert one
-commodity to another (while emitting greenhouse gases as a secondary
-output), and storage for saving/retrieving commodities.
+VICUS is a linear optimization model for a localized energy system. It
+minimises total cost for providing energy in form of desired commodities
+(usually electricity). The model contains commodities (electricity, fossil
+fuels, renewable energy sources, greenhouse gases), processes that convert one
+commodity to another (while emitting greenhouse gases as a secondary output),
+and storage for saving/retrieving commodities.
 
-It operates on a time-discrete basis. The word "localized" means that
+It operates on a time-discrete basis. The word "localised" means that
 all process and storage entities are connected to a single virtual node 
 without transmission losses. All physical quantities in PICUS (except 
 for greenhouse gases) represent energy contents of commodities in the 
@@ -52,10 +51,12 @@ higher reservoir is channeled through a generator.
 import coopr.pyomo as pyomo
 import pandas as pd
 from datetime import datetime
+from operator import itemgetter
 
 COLOURS = {
     'Biomass': (0, 122, 55),
     'Coal': (100, 100, 100),
+    'Demand': (25, 25, 25),
     'Diesel': (116, 66, 65),
     'Gas': (237, 227, 0),   
     'ElecAC': (0, 101, 189),
@@ -70,19 +71,65 @@ COLOURS = {
     'Solar': (243, 174, 0), 
     'Storage': (60, 36, 154),
     'Wind': (122, 179, 225), 
-    'Stock': (222, 222, 222)
-}
+    'Stock': (222, 222, 222),
+    'Decoration': (128, 128, 128)}
+
+def read_excel(filename):
+    """Read Excel input file and prepare VICUS input dict.
+
+    Reads an Excel spreadsheet that adheres to the structure shown in
+    data-example.xlsx, returning a dict of DataFrames, one for each sheet.
+    The attribute 'annuity-factor' is derived here from the columns 'wacc'
+    and 'depreciation' for 'Process' and 'Storage'.
+
+    Args:
+        filename: filename to an Excel spreadsheet with the required sheets
+            'Commodity', 'Process', 'Storage', 'Demand' and 'SupIm'.
+
+    Returns:
+        a dict of 5 DataFrames
+        
+    Example:
+        >>> data = read_excel('data-example.xlsx')
+        >>> data['commodity'].loc[('CO2', 'Env'), 'max']
+        25000.0
+    """
+    with pd.ExcelFile(filename) as xls:
+        commodity = xls.parse('Commodity', index_col=['Co', 'Type'])
+        process = xls.parse('Process', index_col=['Pro', 'CoIn', 'CoOut'])
+        storage = xls.parse('Storage', index_col=['Sto', 'Co'])
+        demand = xls.parse('Demand', index_col=['t']) 
+        supim = xls.parse('SupIm', index_col=['t'])
+    
+    # derive annuity factor for process and storage
+    process['annuity_factor'] = annuity_factor(
+        process['depreciation'], process['wacc'])
+    storage['annuity_factor'] = annuity_factor(
+        storage['depreciation'], storage['wacc'])
+
+    data = {
+        'commodity': commodity,
+        'process': process,
+        'storage': storage,
+        'demand': demand,
+        'supim': supim}
+
+    # sort nested indexes to make direct assignments work, cf
+    # http://pandas.pydata.org/pandas-docs/stable/indexing.html#the-need-for-sortedness-with-multiindex
+    for key in data:
+        if isinstance(data[key].index, pd.core.index.MultiIndex):
+            data[key].sortlevel(inplace=True)
+    return data
 
 
-
-def create_model(filename, timesteps):
-    """ Create a PICUS model object from input file.
+def create_model(data, timesteps):
+    """ Create a VICUS model object from input data.
     
     Creates and returns a Pyomo ConcreteModel object, given a model
     input file (supported formats: Excel spreadsheet [planned: SQLite DB])
     
     Args:
-        filename: input file with attributes for Commodities, Processes, 
+        data: input dict with fields for Commodities, Processes, 
             Storage and timeseries for Demand and SupIm
         timesteps: numpy array of timestep labels, matching the ones 
             used in the Demand and SupIm timeseries
@@ -98,22 +145,14 @@ def create_model(filename, timesteps):
     
     # Preparations
     # ============
-    # Excel import
-    # use Pandas DataFrames instead of Pyomo parameters for entity
-    # attributes. Syntax to access a value:
+    # Data import. Syntax to access a value within equation definitions looks
+    # like this:
     #
-    #     m.process.loc[pro, coin, cout][attribute]
+    #     m.process.loc[sit, pro, coin, cout][attribute]
     #
-    xls = pd.ExcelFile(filename)
-    m.commodity = xls.parse('Commodity', index_col=[0,1])
-    m.process = xls.parse('Process', index_col=[0,1,2])
-    m.storage = xls.parse('Storage', index_col=[0,1])
-    m.demand = xls.parse('Demand', index_col=[0]) 
-    m.supim = xls.parse('SupIm', index_col=[0])
-    
-    # derive annuity factor for process and storage
-    m.process['annuity_factor'] = annuity_factor(m.process['depreciation'], m.process['wacc'])
-    m.storage['annuity_factor'] = annuity_factor(m.storage['depreciation'], m.storage['wacc'])
+    get_inputs = itemgetter(
+        "commodity", "process", "storage", "demand", "supim")
+    (m.commodity, m.process, m.storage, m.demand, m.supim) = get_inputs(data)
       
     # Sets
     # ====
@@ -945,7 +984,7 @@ def plot(instance, co, timesteps=None):
         this_color = to_color(commodity)
             
         sp0[k].set_facecolor(this_color)
-        sp0[k].set_edgecolor((.5,.5,.5))
+        sp0[k].set_edgecolor(to_color('Decoration'))
         
         proxy_artists.append(mpl.patches.Rectangle((0,0), 0,0, 
                                                    facecolor=this_color))
@@ -959,7 +998,7 @@ def plot(instance, co, timesteps=None):
                     reversed(tuple(created.columns)),
                     frameon=False,
                     ncol=created.shape[1])
-    plt.setp(lg.get_patches(), edgecolor=(.5,.5,.5), linewidth=0.15)
+    plt.setp(lg.get_patches(), edgecolor=to_color('Decoration'), linewidth=0.15)
     plt.setp(ax0.get_xticklabels(), visible=False)
     
     # PLOT CONSUMED
@@ -970,10 +1009,11 @@ def plot(instance, co, timesteps=None):
         this_color = to_color(commodity)
             
         sp00[k].set_facecolor(this_color)
-        sp00[k].set_edgecolor((.5,.5,.5))
+        sp00[k].set_edgecolor(to_color('Decoration'))
     
     # PLOT DEMAND
-    dp = ax0.plot(demand.index, demand.values, linewidth=1.2, color=(.1,.1,.1))
+    dp = ax0.plot(demand.index, demand.values, linewidth=1.2, 
+        color=to_color('Demand'))
     
     # PLOT STORAGE
     ax1 = plt.subplot(gs[1], sharex=ax0)
@@ -981,7 +1021,7 @@ def plot(instance, co, timesteps=None):
     
     # color
     sp1[0].set_facecolor(to_color('Storage'))
-    sp1[0].set_edgecolor((.5,.5,.5))
+    sp1[0].set_edgecolor(to_color('Decoration'))
     
     # labels
     ax1.set_title('Energy storage content of commodity "{}"'.format(co))
@@ -1000,11 +1040,11 @@ def plot(instance, co, timesteps=None):
     # set limits and ticks for both axes
     for ax in [ax0, ax1]:
         #ax.set_axis_bgcolor((0,0,0,0))
-        plt.setp(ax.spines.values(), color=(.5,.5,.5))
+        plt.setp(ax.spines.values(), color=to_color('Decoration'))
         ax.set_xlim((timesteps[0], timesteps[-1]))
         ax.set_xticks(xticks)
-        ax.xaxis.grid(True, 'major', color=(.5,.5,.5))
-        ax.yaxis.grid(True, 'major', color=(.5,.5,.5))
+        ax.xaxis.grid(True, 'major', color=to_color('Decoration'))
+        ax.yaxis.grid(True, 'major', color=to_color('Decoration'))
         ax.xaxis.set_ticks_position('none')
         ax.yaxis.set_ticks_position('none')
     return fig
