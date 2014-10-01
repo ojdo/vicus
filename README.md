@@ -12,32 +12,7 @@ VICUS is a [linear programming](https://en.wikipedia.org/wiki/Linear_programming
 
 ## Installation
 
-### Windows
-
-For all packages, best take the latest release or release candidate version. Both 32 bit and 64 bit versions work, though 64 bit is recommended.
-
-  1. **[Python 2.7](https://python.org/download)**. Python 3 support is not possible yet, but planned once all used packages support it.
-  2. **[pip](https://pip.pypa.io/en/latest/installing.html)**.The Python package manager. It allows to install many Python packages with a simple command. 
-      1. After installation, add `C:\Python27\Scripts` to environment variable "Path" ([how](http://geekswithblogs.net/renso/archive/2009/10/21/how-to-set-the-windows-path-in-windows-7.aspx)), so that the `pip` command becomes available on the command prompt.
-  3. **IPython**: execute `pip install ipython` in a command prompt.
-  4. **SciPy stack:** These require binary installers, made available and maintained by [C. Gohlke](http://www.lfd.uci.edu/~gohlke/pythonlibs/). *How to select the correct file:* Download the newest stable version of each package, whose filename suffix matches both "bitness" (32 bit or 64 bit) and Python version (i.e. 2.7).  
-      1. [NumPy](http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy)
-      2. [SciPy](http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy)
-      3. [matplotlib](http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib), requires [dateutil](http://www.lfd.uci.edu/~gohlke/pythonlibs/#python-dateutil), [pytz](http://www.lfd.uci.edu/~gohlke/pythonlibs/#pytz), [pyparsing](http://www.lfd.uci.edu/~gohlke/pythonlibs/#pyparsing) and [six](http://www.lfd.uci.edu/~gohlke/pythonlibs/#six). 
-      4. As a test, you can try start `ipython --pylab` and have a MATLAB-style command line with plotting capabilities. If you receive message about "ipython could not be found", check if the `C:\Python27\Scripts` is added to the "Path" system variable as described in step 2.i. above.
-  5. **[pandas](https://pypi.python.org/pypi/pandas#downloads)**: its [Series](http://pandas.pydata.org/pandas-docs/stable/dsintro.html#series) and [DataFrame](http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dataframe) are used for representing all model input and output. Its capabilities are exploited to write short analysis scripts in `runme.py` and `comp.py`, as well as in the functions `vicus.plot` and `vicus.report`.
-  6. **[Coopr](https://software.sandia.gov/trac/coopr/downloader/)**: minimum version 3.5 or the VOTD (Version of the Day) installer. As of 2014-08-01, only the latter is available for Windows users.
-  7. **Solver**: [GLPK](http://winglpk.sourceforge.net/). 
-      1. Simply unzip the latest version somewhere, e.g. `C:\GLPK`. 
-      2. Then add the subdirectory `w64`, which contains `glpsol.exe`, to the system path (like in step 2.i.), so that the `glpsol` command is available on the command prompt.
-  8. **Excel** reading/writing: `pip install xlrd xlwt openpyxl==1.8.6`
-
-### Linux
-
-Use the package manager to get all the packages listed in the Windows installation section. Below is the installation procedure for Ubuntu & Debian. Other distributions might have slightly different package names or differing procedures to get the individual packages to run:
-
-  - **Everything** except Coopr & Excel I/O `sudo apt-get install python python-pip python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose glpk-utils`
-  - **Coopr & Excel I/O** `sudo pip install coopr xlwt xlrd openpyxl==1.8.6`
+Follow the installation instructions for the [urbs](https://github.com/tum-ens/urbs#installation), then continue with the section **Get started** below.
 
 ## Get started
 
