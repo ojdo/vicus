@@ -320,7 +320,10 @@ def create_model(data, timesteps):
                m.weight
         
     def res_process_output_by_capacity_rule(m, tm, pro, coin, cout):
-        return m.e_pro_out[tm, pro, coin, cout] <= m.cap_pro[pro, coin, cout]
+        if coin in m.co_supim:
+            return pyomo.Constraint.Skip
+        else:
+            return m.e_pro_out[tm, pro, coin, cout] <= m.cap_pro[pro, coin, cout]
         
     def res_process_capacity_rule(m, pro, coin, cout):
         return (m.process.loc[pro, coin, cout]['cap-lo'],
