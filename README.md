@@ -1,3 +1,6 @@
+| :warning: 2014-12-05: VICUS is deprecated. Better use [URBS](https://github.com/tum-ens/urbs). |
+| --- |
+
 # VICUS
 
 VICUS is a [linear programming](https://en.wikipedia.org/wiki/Linear_programming) optimisation model for capacity expansion planning and unit commitment for localised energy systems. Its name, latin for village, is derived from its bigger sister model [URBS](https://github.com/tum-ens/urbs) (latin for city). Its name stems from its origin as a model for optimisation for urban energy systems.
